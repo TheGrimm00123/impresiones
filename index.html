@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Impresión de Imágenes (Forzar Fill)</title>
+  <title>Impresión de Imágenes (Forzar Fill y Rotación)</title>
   <style>
     /* ======= ESTILOS GENERALES ======= */
     body {
@@ -122,13 +122,11 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      /* Optional: overflow: hidden para que nada se salga del recuadro */
     }
-    /* NOTA: object-fit: fill */
     .preview-image img {
       width: 100%;
       height: 100%;
-      object-fit: fill; /* Para estirar sin recortar nada */
+      object-fit: fill; /* Estira en la vista previa */
     }
 
     /* ======= PAGINACIÓN ======= */
@@ -178,14 +176,13 @@
       justify-content: center;
       align-items: center;
     }
-    /* Fuerza el fill para no recortar ninguna parte */
     .collage-item img {
       width: 100%;
       height: 100%;
       object-fit: fill;
     }
 
-    /* ======= MODAL ======= */
+    /* ======= MODAL (QUITAR COLOR) ======= */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -238,6 +235,77 @@
         page-break-inside: avoid;
       }
     }
+
+    /* ======= MODAL 2 IMÁGENES (NUEVO) ======= */
+    .modal-overlay-2 {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000; /* un poco más que el anterior */
+    }
+    .modal-2 {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      width: 500px;
+      max-width: 90%;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    .modal-2 h2 {
+      margin-top: 0;
+    }
+    .modal-2 .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #999;
+    }
+    .modal-2 .modal-close:hover {
+      background-color: #777;
+    }
+    .two-images-preview {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    /* Contenedor fijo: 8.5 cm x 5.5 cm => ~322 px x 208 px */
+    .image-box {
+      width: 322px;
+      height: 208px;
+      border: 1px solid #ccc;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Sin object-fit, controlamos todo con transform + scale */
+    .image-box img {
+      width: 100%;
+      height: 100%;
+      transform-origin: center center; /* para rotar desde el centro */
+    }
+    /* Botón para quitar imagen */
+    .remove-img-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background-color: rgba(255, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 20px;
+      text-align: center;
+      padding: 0;
+    }
   </style>
 </head>
 
@@ -248,8 +316,11 @@
       <h1>Impresión de Imágenes</h1>
       <input type="file" id="imageUpload" multiple accept="image/*"/>
 
-      <!-- Botón para abrir modal quitar color -->
+      <!-- Botón para abrir modal quitar color (original) -->
       <button onclick="openModal()">Abrir Modal Quitar Color</button>
+
+      <!-- NUEVO Botón para abrir modal de 2 imágenes -->
+      <button onclick="openTwoImagesModal()">Abrir Modal 2 Imágenes</button>
 
       <!-- Config vista previa -->
       <div class="form-group">
@@ -334,7 +405,7 @@
       <button onclick="generateCollage()">Generar Collage</button>
       <button onclick="printCollage()">Imprimir Collage</button>
 
-      <!-- Control de brillo -->
+      <!-- Control de brillo (general) -->
       <h2>Ajustar Brillo</h2>
       <input type="range" id="brightnessRange" min="0.5" max="2" step="0.1" value="1" oninput="updateBrightness()"/>
     </div>
@@ -353,7 +424,7 @@
     </div>
   </div>
 
-  <!-- MODAL QUITAR COLOR -->
+  <!-- ============ MODAL QUITAR COLOR (EXISTENTE) ============ -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal" id="modal">
       <button class="modal-close" onclick="closeModal()">X</button>
@@ -365,8 +436,63 @@
     </div>
   </div>
 
+  <!-- ============ NUEVO MODAL PARA 2 IMÁGENES ============ -->
+  <div class="modal-overlay-2" id="twoImagesOverlay">
+    <div class="modal-2" id="twoImagesModal">
+      <button class="modal-close" onclick="closeTwoImagesModal()">X</button>
+      <h2>Subir 2 Imágenes</h2>
+
+      <!-- Inputs para cargar cada imagen -->
+      <div style="margin-bottom: 10px;">
+        <label>Imagen 1:</label>
+        <input type="file" id="image1Input" accept="image/*" />
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label>Imagen 2:</label>
+        <input type="file" id="image2Input" accept="image/*" />
+      </div>
+
+      <!-- Vista previa de las 2 imágenes lado a lado con botón para quitarlas -->
+      <div class="two-images-preview">
+        <div class="image-box" id="imageBox1">
+          <img id="previewImg1" alt="Imagen 1" />
+          <button class="remove-img-btn" onclick="removeImage(1)">X</button>
+        </div>
+        <div class="image-box" id="imageBox2">
+          <img id="previewImg2" alt="Imagen 2" />
+          <button class="remove-img-btn" onclick="removeImage(2)">X</button>
+        </div>
+      </div>
+
+      <hr>
+      <h3>Controles Imagen 1</h3>
+      <button onclick="rotateImage(1, -90)">Rotar Izq 90°</button>
+      <button onclick="rotateImage(1, 90)">Rotar Der 90°</button>
+      <button onclick="flipHorizontal(1)">Flip H</button>
+      <button onclick="flipVertical(1)">Flip V</button>
+      <br><br>
+      <label>Brillo: 
+        <input type="range" id="brightnessRange1" min="0.5" max="2" step="0.1" value="1" oninput="updateBrightnessIndividual(1)">
+      </label>
+
+      <hr>
+      <h3>Controles Imagen 2</h3>
+      <button onclick="rotateImage(2, -90)">Rotar Izq 90°</button>
+      <button onclick="rotateImage(2, 90)">Rotar Der 90°</button>
+      <button onclick="flipHorizontal(2)">Flip H</button>
+      <button onclick="flipVertical(2)">Flip V</button>
+      <br><br>
+      <label>Brillo: 
+        <input type="range" id="brightnessRange2" min="0.5" max="2" step="0.1" value="1" oninput="updateBrightnessIndividual(2)">
+      </label>
+
+      <hr>
+      <button onclick="printTwoImages()">Imprimir 2 Imágenes</button>
+    </div>
+  </div>
+
   <script>
-    /* ==================== MODAL ==================== */
+    /* ==================== MODAL (QUITAR COLOR) ==================== */
     const modalOverlay = document.getElementById('modal-overlay');
     const convertedImage = document.getElementById('converted-image');
     let modalOriginalImage = null;
@@ -391,7 +517,6 @@
       reader.readAsDataURL(file);
     });
 
-    // Quitar colores con Sobel
     function removeColors() {
       if (!modalOriginalImage) return;
       const canvas = document.createElement('canvas');
@@ -452,15 +577,7 @@
       convertedImage.src = canvas.toDataURL('image/png');
     }
 
-    function downloadImage() {
-      if (!convertedImage.src) return;
-      const link = document.createElement('a');
-      link.href = convertedImage.src;
-      link.download = 'imagen_blanco_negro.png';
-      link.click();
-    }
-
-    /* ==================== LÓGICA PRINCIPAL ==================== */
+    /* ==================== LÓGICA PRINCIPAL (PAGINADO) ==================== */
     const imageUpload = document.getElementById('imageUpload');
     const imagesPerPageSelect = document.getElementById('imagesPerPage');
     const imageWidthInput = document.getElementById('imageWidth');
@@ -482,7 +599,6 @@
     const collageCountSelect = document.getElementById('collageCount');
     const collageContainer = document.getElementById('collage');
 
-    /* ======== ACTIVAR/DESACTIVAR TAMAÑO PERSONALIZADO ======== */
     function toggleCustomSize() {
       const useCustomSize = useCustomSizeCheckbox.checked;
       imageWidthInput.disabled = !useCustomSize;
@@ -490,7 +606,6 @@
       customSizeOptions.style.display = useCustomSize ? 'block' : 'none';
     }
 
-    /* ======== DIMENSIONES PAPEL ======== */
     function getPaperDimensions() {
       const paperSize = paperSizeSelect.value;
       const orientation = orientationSelect.value;
@@ -512,7 +627,6 @@
       return { width, height };
     }
 
-    /* ======== CARGA IMAGEN ASÍNCRONA ======== */
     function loadImage(url) {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -522,7 +636,6 @@
       });
     }
 
-    /* ======== GENERAR VISTA PREVIA (PAGINADA) ======== */
     function generatePreview() {
       if (imageUpload.files.length === 0) {
         errorMessage.style.display = 'block';
@@ -563,6 +676,7 @@
             currentPage.style.width = `${pageWidth}px`;
             currentPage.style.height = `${pageHeight}px`;
 
+            currentPage.style.display = 'grid';
             if (useCustomSize) {
               currentPage.style.gridTemplateColumns = `repeat(${imagesPerRow}, ${imageWidthPx}px)`;
               currentPage.style.gridTemplateRows = `repeat(${imagesPerColumn}, ${imageHeightPx}px)`;
@@ -575,13 +689,12 @@
           const imgContainer = document.createElement('div');
           imgContainer.className = 'preview-image';
 
-          // Con fill, no recortamos nada
           const clonedImg = img.cloneNode();
           clonedImg.style.width = '100%';
           clonedImg.style.height = '100%';
           clonedImg.style.objectFit = 'fill';
-
           imgContainer.appendChild(clonedImg);
+
           currentPage.appendChild(imgContainer);
           imageCount++;
         });
@@ -603,7 +716,6 @@
       showPage(currentPageIndex + dir);
     }
 
-    /* ======== GENERAR COLLAGE (UNA SOLA HOJA) ======== */
     function generateCollage() {
       collageContainer.innerHTML = '';
       const files = imageUpload.files;
@@ -624,7 +736,6 @@
 
         const orientation = orientationSelect.value;
 
-        // Layouts de ejemplo para 3,5,7,9
         switch(count) {
           case 3:
             collageDiv.style.gridTemplateColumns = '40% 60%';
@@ -675,7 +786,6 @@
             break;
 
           default:
-            // Fallback si deseas manejar más casos impares
             collageDiv.style.gridTemplateColumns = '1fr';
             collageDiv.style.gridTemplateRows = `repeat(${images.length}, 1fr)`;
             images.forEach((img, i) => {
@@ -693,7 +803,6 @@
       slot.style.gridRow = row;
 
       const cloned = img.cloneNode();
-      // "fill" para no recortar la imagen (se deformará si la caja no coincide con su aspecto)
       cloned.style.width = '100%';
       cloned.style.height = '100%';
       cloned.style.objectFit = 'fill';
@@ -702,14 +811,12 @@
       container.appendChild(slot);
     }
 
-    /* ======== CONTROL DE BRILLO ======== */
     function updateBrightness() {
       const val = document.getElementById('brightnessRange').value;
       preview.style.filter = `brightness(${val})`;
       collageContainer.style.filter = `brightness(${val})`;
     }
 
-    /* ======== IMPRIMIR VISTA PREVIA ======== */
     function printImages() {
       if (preview.innerHTML.trim() === '' && collageContainer.innerHTML.trim() === '') {
         errorMessage.style.display = 'block';
@@ -723,12 +830,12 @@
       w.document.write('.preview-image img{width:100%;height:100%;object-fit:fill;}');
       w.document.write('</style></head><body>');
       pages.forEach(p => w.document.write(p.outerHTML));
+      w.document.write(collageContainer.innerHTML);
       w.document.write('</body></html>');
       w.document.close();
       w.print();
     }
 
-    /* ======== IMPRIMIR COLLAGE ======== */
     function printCollage() {
       if (collageContainer.innerHTML.trim() === '') {
         errorMessage.style.display = 'block';
@@ -745,6 +852,254 @@
       w.document.write('</style></head><body>');
       w.document.write(collageContainer.innerHTML);
       w.document.write('</body></html>');
+      w.document.close();
+      w.print();
+    }
+
+    /* ==================== MODAL 2 IMÁGENES ==================== */
+    const twoImagesOverlay = document.getElementById('twoImagesOverlay');
+    const image1Input = document.getElementById('image1Input');
+    const image2Input = document.getElementById('image2Input');
+    const previewImg1 = document.getElementById('previewImg1');
+    const previewImg2 = document.getElementById('previewImg2');
+
+    // Variables para cada imagen
+    let rotation1 = 0, scaleX1 = 1, scaleY1 = 1, brightness1 = 1;
+    let rotation2 = 0, scaleX2 = 1, scaleY2 = 1, brightness2 = 1;
+
+    let image1DataUrl = '';
+    let image2DataUrl = '';
+
+    function openTwoImagesModal() {
+      twoImagesOverlay.style.display = 'flex';
+    }
+    function closeTwoImagesModal() {
+      twoImagesOverlay.style.display = 'none';
+      // Reset
+      image1Input.value = '';
+      image2Input.value = '';
+      previewImg1.src = '';
+      previewImg2.src = '';
+      rotation1 = 0; scaleX1 = 1; scaleY1 = 1; brightness1 = 1;
+      rotation2 = 0; scaleX2 = 1; scaleY2 = 1; brightness2 = 1;
+      previewImg1.style.transform = '';
+      previewImg1.style.filter = '';
+      previewImg2.style.transform = '';
+      previewImg2.style.filter = '';
+      image1DataUrl = '';
+      image2DataUrl = '';
+      document.getElementById('brightnessRange1').value = '1';
+      document.getElementById('brightnessRange2').value = '1';
+    }
+
+    // Carga de imagen 1
+    image1Input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        image1DataUrl = evt.target.result;
+        previewImg1.src = image1DataUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Carga de imagen 2
+    image2Input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        image2DataUrl = evt.target.result;
+        previewImg2.src = image2DataUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Rotar/flip
+    function rotateImage(imgNumber, angle) {
+      if (imgNumber === 1) {
+        rotation1 += angle;
+        // Normalizar rotación a 0..359
+        rotation1 = (rotation1 % 360 + 360) % 360;
+        updateImageTransform(1);
+      } else {
+        rotation2 += angle;
+        rotation2 = (rotation2 % 360 + 360) % 360;
+        updateImageTransform(2);
+      }
+    }
+    function flipHorizontal(imgNumber) {
+      if (imgNumber === 1) {
+        scaleX1 *= -1;
+        updateImageTransform(1);
+      } else {
+        scaleX2 *= -1;
+        updateImageTransform(2);
+      }
+    }
+    function flipVertical(imgNumber) {
+      if (imgNumber === 1) {
+        scaleY1 *= -1;
+        updateImageTransform(1);
+      } else {
+        scaleY2 *= -1;
+        updateImageTransform(2);
+      }
+    }
+
+    // Ajustar brillo individual
+    function updateBrightnessIndividual(imgNumber) {
+      if (imgNumber === 1) {
+        brightness1 = document.getElementById('brightnessRange1').value;
+        updateImageTransform(1);
+      } else {
+        brightness2 = document.getElementById('brightnessRange2').value;
+        updateImageTransform(2);
+      }
+    }
+
+    // Escalado dinámico según la rotación para llenar 8.5×5.5
+    function updateImageTransform(imgNumber) {
+      let rotation, scaleX, scaleY, brightness;
+      let element;
+
+      if (imgNumber === 1) {
+        rotation = rotation1;
+        scaleX = scaleX1;
+        scaleY = scaleY1;
+        brightness = brightness1;
+        element = previewImg1;
+      } else {
+        rotation = rotation2;
+        scaleX = scaleX2;
+        scaleY = scaleY2;
+        brightness = brightness2;
+        element = previewImg2;
+      }
+
+      // La caja es 322 px de ancho x 208 px de alto
+      // Si la rotación es 90 o 270, se invierte la relación
+      let baseScaleX = 1;
+      let baseScaleY = 1;
+      if (rotation === 90 || rotation === 270) {
+        // Intercambiamos la proporción ancho/alto
+        baseScaleX = 208 / 322; // 0.645
+        baseScaleY = 322 / 208; // 1.548
+      }
+
+      // Incorporar flips del usuario
+      let finalScaleX = baseScaleX * scaleX;
+      let finalScaleY = baseScaleY * scaleY;
+
+      // Aplicar transform
+      element.style.transform = `rotate(${rotation}deg) scale(${finalScaleX}, ${finalScaleY})`;
+      element.style.filter = `brightness(${brightness})`;
+    }
+
+    // Eliminar imagen
+    function removeImage(imgNumber) {
+      if (imgNumber === 1) {
+        image1DataUrl = '';
+        previewImg1.src = '';
+        rotation1 = 0; scaleX1 = 1; scaleY1 = 1; brightness1 = 1;
+        document.getElementById('image1Input').value = '';
+        document.getElementById('brightnessRange1').value = '1';
+      } else {
+        image2DataUrl = '';
+        previewImg2.src = '';
+        rotation2 = 0; scaleX2 = 1; scaleY2 = 1; brightness2 = 1;
+        document.getElementById('image2Input').value = '';
+        document.getElementById('brightnessRange2').value = '1';
+      }
+    }
+
+    // Imprimir 2 imágenes
+    function printTwoImages() {
+      if (!image1DataUrl && !image2DataUrl) return;
+
+      const pageWidth = 816;  // ~8.5" en px
+      const pageHeight = 1056; // ~11" en px
+
+      // Tomamos las transformaciones actuales
+      const transform1 = `rotate(${rotation1}deg) scale(${
+        rotation1 === 90 || rotation1 === 270 ? (208/322 * scaleX1) : scaleX1
+      }, ${
+        rotation1 === 90 || rotation1 === 270 ? (322/208 * scaleY1) : scaleY1
+      })`;
+      const filter1 = `brightness(${brightness1})`;
+
+      const transform2 = `rotate(${rotation2}deg) scale(${
+        rotation2 === 90 || rotation2 === 270 ? (208/322 * scaleX2) : scaleX2
+      }, ${
+        rotation2 === 90 || rotation2 === 270 ? (322/208 * scaleY2) : scaleY2
+      })`;
+      const filter2 = `brightness(${brightness2})`;
+
+      // Armamos la ventana de impresión
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <html>
+          <head>
+            <title>Imprimir 2 Imágenes</title>
+            <style>
+              @page {
+                size: letter;
+                margin: 0;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+              }
+              .print-container {
+                width: ${pageWidth}px;
+                height: ${pageHeight}px;
+                margin: 0 auto;
+                position: relative;
+              }
+              .top-row {
+                display: flex;
+                flex-direction: row;
+                margin-top: 20px;
+                justify-content: center;
+                gap: 20px;
+              }
+              .img-box {
+                width: 322px;
+                height: 208px;
+                border: 1px solid #ccc;
+                overflow: hidden;
+                position: relative;
+              }
+              .img-box img {
+                width: 100%;
+                height: 100%;
+                transform-origin: center center;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="print-container">
+              <div class="top-row">
+                <div class="img-box">
+                  ${
+                    image1DataUrl
+                      ? `<img src="${image1DataUrl}" style="transform:${transform1};filter:${filter1};" />`
+                      : ''
+                  }
+                </div>
+                <div class="img-box">
+                  ${
+                    image2DataUrl
+                      ? `<img src="${image2DataUrl}" style="transform:${transform2};filter:${filter2};" />`
+                      : ''
+                  }
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
       w.document.close();
       w.print();
     }
