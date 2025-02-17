@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Impresión de Imágenes (Forzar Fill y Rotación)</title>
+  <title>Impresión de Imágenes (Forzar Fill, Rotación y Recorte)</title>
   <style>
     /* ======= ESTILOS GENERALES ======= */
     body {
@@ -283,13 +283,12 @@
       position: relative;
       overflow: hidden;
     }
-    /* Sin object-fit, controlamos todo con transform + scale */
     .image-box img {
       width: 100%;
       height: 100%;
       transform-origin: center center; /* para rotar desde el centro */
+      cursor: pointer; /* para indicar que se puede hacer clic para recortar */
     }
-    /* Botón para quitar imagen */
     .remove-img-btn {
       position: absolute;
       top: 5px;
@@ -305,6 +304,82 @@
       line-height: 20px;
       text-align: center;
       padding: 0;
+    }
+
+    /* ======= MODAL DE RECORTE (NUEVO) ======= */
+    .modal-overlay-crop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000; 
+    }
+    .modal-crop {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      width: 80%;
+      max-width: 800px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+    }
+    .modal-crop .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #999;
+    }
+    .crop-container {
+      position: relative;
+      width: 100%;
+      height: 600px; /* altura grande para ver la imagen */
+      overflow: hidden;
+      background-color: #333; 
+    }
+    .crop-container img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      /* Se escala para que quepa en .crop-container */
+      max-width: 100%;
+      max-height: 100%;
+    }
+    /* Rectángulo de recorte */
+    .crop-box {
+      position: absolute;
+      border: 2px dashed #0af;
+      box-sizing: border-box;
+      cursor: move; 
+    }
+    /* Esquinas (handles) */
+    .crop-handle {
+      width: 10px;
+      height: 10px;
+      background-color: #0af;
+      position: absolute;
+      cursor: nwse-resize;
+    }
+    .crop-handle.top-left {
+      top: -5px; left: -5px;
+      cursor: nwse-resize;
+    }
+    .crop-handle.top-right {
+      top: -5px; right: -5px;
+      cursor: nesw-resize;
+    }
+    .crop-handle.bottom-left {
+      bottom: -5px; left: -5px;
+      cursor: nesw-resize;
+    }
+    .crop-handle.bottom-right {
+      bottom: -5px; right: -5px;
+      cursor: nwse-resize;
     }
   </style>
 </head>
@@ -359,7 +434,6 @@
         </select>
       </div>
 
-      <!-- Checkboxes (puedes ignorarlos si siempre quieres fill) -->
       <div class="form-group">
         <label for="fillImage">Rellenar imagen</label>
         <input type="checkbox" id="fillImage" checked />
@@ -369,7 +443,6 @@
         <input type="checkbox" id="stretchImage" checked />
       </div>
 
-      <!-- Tamaño personalizado -->
       <div class="form-group">
         <label for="useCustomSize">Usar tamaño personalizado:</label>
         <input type="checkbox" id="useCustomSize" onclick="toggleCustomSize()" />
@@ -386,12 +459,10 @@
         </div>
       </div>
 
-      <!-- Botones vista previa e imprimir -->
       <button onclick="generatePreview()">Generar Vista Previa</button>
       <div id="error-message">Por favor, selecciona al menos una imagen</div>
       <button id="printButton" onclick="printImages()">Imprimir</button>
 
-      <!-- Collage: para varios impares -->
       <h2>Collage Impares</h2>
       <div class="form-group">
         <label for="collageCount"># Imágenes (3,5,7,9...):</label>
@@ -405,7 +476,6 @@
       <button onclick="generateCollage()">Generar Collage</button>
       <button onclick="printCollage()">Imprimir Collage</button>
 
-      <!-- Control de brillo (general) -->
       <h2>Ajustar Brillo</h2>
       <input type="range" id="brightnessRange" min="0.5" max="2" step="0.1" value="1" oninput="updateBrightness()"/>
     </div>
@@ -418,13 +488,11 @@
         <button id="prevPage" class="page-navigation" onclick="changePage(-1)" disabled>Anterior</button>
         <button id="nextPage" class="page-navigation" onclick="changePage(1)" disabled>Siguiente</button>
       </div>
-
-      <!-- Collage en 1 hoja -->
       <div id="collage"></div>
     </div>
   </div>
 
-  <!-- ============ MODAL QUITAR COLOR (EXISTENTE) ============ -->
+  <!-- ============ MODAL QUITAR COLOR ============ -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal" id="modal">
       <button class="modal-close" onclick="closeModal()">X</button>
@@ -436,13 +504,12 @@
     </div>
   </div>
 
-  <!-- ============ NUEVO MODAL PARA 2 IMÁGENES ============ -->
+  <!-- ============ MODAL PARA 2 IMÁGENES ============ -->
   <div class="modal-overlay-2" id="twoImagesOverlay">
     <div class="modal-2" id="twoImagesModal">
       <button class="modal-close" onclick="closeTwoImagesModal()">X</button>
       <h2>Subir 2 Imágenes</h2>
 
-      <!-- Inputs para cargar cada imagen -->
       <div style="margin-bottom: 10px;">
         <label>Imagen 1:</label>
         <input type="file" id="image1Input" accept="image/*" />
@@ -452,7 +519,6 @@
         <input type="file" id="image2Input" accept="image/*" />
       </div>
 
-      <!-- Vista previa de las 2 imágenes lado a lado con botón para quitarlas -->
       <div class="two-images-preview">
         <div class="image-box" id="imageBox1">
           <img id="previewImg1" alt="Imagen 1" />
@@ -488,6 +554,25 @@
 
       <hr>
       <button onclick="printTwoImages()">Imprimir 2 Imágenes</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL DE RECORTE (NUEVO) ============ -->
+  <div class="modal-overlay-crop" id="cropOverlay">
+    <div class="modal-crop" id="cropModal">
+      <button class="modal-close" onclick="closeCropModal()">X</button>
+      <h2>Recortar Imagen</h2>
+      <div class="crop-container" id="cropContainer">
+        <img id="cropImage" alt="Imagen a recortar"/>
+        <div class="crop-box" id="cropBox">
+          <div class="crop-handle top-left"></div>
+          <div class="crop-handle top-right"></div>
+          <div class="crop-handle bottom-left"></div>
+          <div class="crop-handle bottom-right"></div>
+        </div>
+      </div>
+      <br>
+      <button onclick="confirmCrop()">Confirmar Recorte</button>
     </div>
   </div>
 
@@ -612,14 +697,14 @@
       let width, height;
 
       if (paperSize === 'letter') {
-        width = 816;  // ~8.5" * 96dpi
-        height = 1056; // ~11" * 96dpi
+        width = 816;  
+        height = 1056; 
       } else if (paperSize === 'a4') {
         width = 793;
         height = 1122;
       } else if (paperSize === 'legal') {
         width = 816;
-        height = 1248; // 13" * 96
+        height = 1248; 
       }
       if (orientation === 'landscape') {
         [width, height] = [height, width];
@@ -675,8 +760,8 @@
             currentPage.className = 'page';
             currentPage.style.width = `${pageWidth}px`;
             currentPage.style.height = `${pageHeight}px`;
-
             currentPage.style.display = 'grid';
+
             if (useCustomSize) {
               currentPage.style.gridTemplateColumns = `repeat(${imagesPerRow}, ${imageWidthPx}px)`;
               currentPage.style.gridTemplateRows = `repeat(${imagesPerColumn}, ${imageHeightPx}px)`;
@@ -863,10 +948,8 @@
     const previewImg1 = document.getElementById('previewImg1');
     const previewImg2 = document.getElementById('previewImg2');
 
-    // Variables para cada imagen
     let rotation1 = 0, scaleX1 = 1, scaleY1 = 1, brightness1 = 1;
     let rotation2 = 0, scaleX2 = 1, scaleY2 = 1, brightness2 = 1;
-
     let image1DataUrl = '';
     let image2DataUrl = '';
 
@@ -875,7 +958,6 @@
     }
     function closeTwoImagesModal() {
       twoImagesOverlay.style.display = 'none';
-      // Reset
       image1Input.value = '';
       image2Input.value = '';
       previewImg1.src = '';
@@ -920,7 +1002,6 @@
     function rotateImage(imgNumber, angle) {
       if (imgNumber === 1) {
         rotation1 += angle;
-        // Normalizar rotación a 0..359
         rotation1 = (rotation1 % 360 + 360) % 360;
         updateImageTransform(1);
       } else {
@@ -948,7 +1029,6 @@
       }
     }
 
-    // Ajustar brillo individual
     function updateBrightnessIndividual(imgNumber) {
       if (imgNumber === 1) {
         brightness1 = document.getElementById('brightnessRange1').value;
@@ -959,7 +1039,6 @@
       }
     }
 
-    // Escalado dinámico según la rotación para llenar 8.5×5.5
     function updateImageTransform(imgNumber) {
       let rotation, scaleX, scaleY, brightness;
       let element;
@@ -978,26 +1057,20 @@
         element = previewImg2;
       }
 
-      // La caja es 322 px de ancho x 208 px de alto
-      // Si la rotación es 90 o 270, se invierte la relación
       let baseScaleX = 1;
       let baseScaleY = 1;
       if (rotation === 90 || rotation === 270) {
-        // Intercambiamos la proporción ancho/alto
-        baseScaleX = 208 / 322; // 0.645
-        baseScaleY = 322 / 208; // 1.548
+        baseScaleX = 208 / 322; 
+        baseScaleY = 322 / 208; 
       }
 
-      // Incorporar flips del usuario
       let finalScaleX = baseScaleX * scaleX;
       let finalScaleY = baseScaleY * scaleY;
 
-      // Aplicar transform
       element.style.transform = `rotate(${rotation}deg) scale(${finalScaleX}, ${finalScaleY})`;
       element.style.filter = `brightness(${brightness})`;
     }
 
-    // Eliminar imagen
     function removeImage(imgNumber) {
       if (imgNumber === 1) {
         image1DataUrl = '';
@@ -1014,14 +1087,12 @@
       }
     }
 
-    // Imprimir 2 imágenes
     function printTwoImages() {
       if (!image1DataUrl && !image2DataUrl) return;
 
-      const pageWidth = 816;  // ~8.5" en px
-      const pageHeight = 1056; // ~11" en px
+      const pageWidth = 816;  
+      const pageHeight = 1056; 
 
-      // Tomamos las transformaciones actuales
       const transform1 = `rotate(${rotation1}deg) scale(${
         rotation1 === 90 || rotation1 === 270 ? (208/322 * scaleX1) : scaleX1
       }, ${
@@ -1036,21 +1107,14 @@
       })`;
       const filter2 = `brightness(${brightness2})`;
 
-      // Armamos la ventana de impresión
       const w = window.open('', '_blank');
       w.document.write(`
         <html>
           <head>
             <title>Imprimir 2 Imágenes</title>
             <style>
-              @page {
-                size: letter;
-                margin: 0;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-              }
+              @page { size: letter; margin: 0; }
+              body { margin: 0; padding: 0; }
               .print-container {
                 width: ${pageWidth}px;
                 height: ${pageHeight}px;
@@ -1103,6 +1167,191 @@
       w.document.close();
       w.print();
     }
+
+    /* ==================== MODAL DE RECORTE ==================== */
+    const cropOverlay = document.getElementById('cropOverlay');
+    const cropModal = document.getElementById('cropModal');
+    const cropContainer = document.getElementById('cropContainer');
+    const cropImage = document.getElementById('cropImage');
+    const cropBox = document.getElementById('cropBox');
+
+    let currentCropImgNumber = 1; // 1 o 2
+    let cropStartX = 0, cropStartY = 0; 
+    let isDraggingCropBox = false;
+    let isResizing = false;
+    let currentHandle = null;
+
+    // Posición y tamaño inicial del cropBox
+    let cropBoxX = 50, cropBoxY = 50, cropBoxW = 200, cropBoxH = 150;
+
+    // Abrir modal de recorte
+    function openCropModal(imgNumber) {
+      currentCropImgNumber = imgNumber;
+
+      // Obtenemos la imagen y su transform actual
+      let theImg = (imgNumber === 1) ? previewImg1 : previewImg2;
+      if (!theImg.src) return; // si no hay imagen, no abrir
+
+      // Clonamos el estilo transform para "ver" la imagen tal cual
+      // pero en este ejemplo, no aplicamos la rotación/flips en el crop
+      // (Podrías hacerlo si extraes la rotación y la aplicas con canvas,
+      //  pero es más complejo. Aquí mostramos la imagen "tal cual" base64)
+      cropImage.src = theImg.src;
+
+      // Reset del cropBox
+      cropBoxX = 50;
+      cropBoxY = 50;
+      cropBoxW = 300;
+      cropBoxH = 200;
+      updateCropBox();
+
+      // Mostramos modal
+      cropOverlay.style.display = 'flex';
+    }
+
+    function closeCropModal() {
+      cropOverlay.style.display = 'none';
+      cropImage.src = '';
+    }
+
+    // Actualiza la posición/tamaño del .crop-box en pantalla
+    function updateCropBox() {
+      cropBox.style.left = cropBoxX + 'px';
+      cropBox.style.top = cropBoxY + 'px';
+      cropBox.style.width = cropBoxW + 'px';
+      cropBox.style.height = cropBoxH + 'px';
+    }
+
+    // MouseDown en el cropBox (para arrastrar)
+    cropBox.addEventListener('mousedown', (e) => {
+      // Si se hizo clic en un handle, no arrastramos la caja entera
+      if (e.target.classList.contains('crop-handle')) return;
+
+      isDraggingCropBox = true;
+      cropStartX = e.clientX - cropBoxX;
+      cropStartY = e.clientY - cropBoxY;
+      e.stopPropagation();
+      e.preventDefault();
+    });
+
+    // MouseDown en uno de los handles
+    const handles = cropBox.querySelectorAll('.crop-handle');
+    handles.forEach(handle => {
+      handle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        currentHandle = handle;
+        cropStartX = e.clientX;
+        cropStartY = e.clientY;
+        e.stopPropagation();
+        e.preventDefault();
+      });
+    });
+
+    // MouseMove global
+    document.addEventListener('mousemove', (e) => {
+      if (isDraggingCropBox) {
+        cropBoxX = e.clientX - cropStartX;
+        cropBoxY = e.clientY - cropStartY;
+        // Limites básicos
+        if (cropBoxX < 0) cropBoxX = 0;
+        if (cropBoxY < 0) cropBoxY = 0;
+        // Podrías limitar a ancho/alto del contenedor
+        updateCropBox();
+      } else if (isResizing) {
+        let dx = e.clientX - cropStartX;
+        let dy = e.clientY - cropStartY;
+
+        if (currentHandle.classList.contains('top-left')) {
+          cropBoxX += dx;
+          cropBoxY += dy;
+          cropBoxW -= dx;
+          cropBoxH -= dy;
+        } else if (currentHandle.classList.contains('top-right')) {
+          cropBoxY += dy;
+          cropBoxW += dx;
+          cropBoxH -= dy;
+        } else if (currentHandle.classList.contains('bottom-left')) {
+          cropBoxX += dx;
+          cropBoxW -= dx;
+          cropBoxH += dy;
+        } else if (currentHandle.classList.contains('bottom-right')) {
+          cropBoxW += dx;
+          cropBoxH += dy;
+        }
+        // No permitir tamaño negativo
+        if (cropBoxW < 20) cropBoxW = 20;
+        if (cropBoxH < 20) cropBoxH = 20;
+        // Actualizar
+        cropStartX = e.clientX;
+        cropStartY = e.clientY;
+        updateCropBox();
+      }
+    });
+
+    // MouseUp global
+    document.addEventListener('mouseup', (e) => {
+      isDraggingCropBox = false;
+      isResizing = false;
+      currentHandle = null;
+    });
+
+    // Confirmar recorte: usamos <canvas> para extraer la parte del cropBox
+    function confirmCrop() {
+      if (!cropImage.src) return;
+
+      // Tomamos las dimensiones reales de la imagen dentro de cropContainer
+      const rectContainer = cropContainer.getBoundingClientRect();
+      const rectImage = cropImage.getBoundingClientRect();
+
+      // Calculamos factor de escala
+      const realWidth = cropImage.naturalWidth;
+      const realHeight = cropImage.naturalHeight;
+      const displayedWidth = rectImage.width;
+      const displayedHeight = rectImage.height;
+
+      const scaleX = realWidth / displayedWidth;
+      const scaleY = realHeight / displayedHeight;
+
+      // La posición del cropBox relativo a la imagen
+      // (cropBoxX, cropBoxY) está en coords del contenedor
+      const cropLeft = cropBoxX - (rectImage.left - rectContainer.left);
+      const cropTop = cropBoxY - (rectImage.top - rectContainer.top);
+
+      // Ajustamos por la escala
+      const sx = cropLeft * scaleX;
+      const sy = cropTop * scaleY;
+      const sw = cropBoxW * scaleX;
+      const sh = cropBoxH * scaleY;
+
+      // Crear canvas para recortar
+      const canvas = document.createElement('canvas');
+      canvas.width = sw;
+      canvas.height = sh;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(
+        cropImage,
+        sx, sy, sw, sh,
+        0, 0, sw, sh
+      );
+
+      // Data URL recortada
+      const croppedDataUrl = canvas.toDataURL('image/png');
+
+      // Asignamos a la imagen original en el modal de 2 imágenes
+      if (currentCropImgNumber === 1) {
+        image1DataUrl = croppedDataUrl;
+        previewImg1.src = croppedDataUrl;
+      } else {
+        image2DataUrl = croppedDataUrl;
+        previewImg2.src = croppedDataUrl;
+      }
+
+      closeCropModal();
+    }
+
+    // Cuando hacemos clic en la imagen (en el modal de 2 imágenes), abrimos crop
+    previewImg1.addEventListener('click', () => openCropModal(1));
+    previewImg2.addEventListener('click', () => openCropModal(2));
   </script>
 </body>
 </html>
