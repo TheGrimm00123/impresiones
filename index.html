@@ -553,6 +553,9 @@
       </label>
 
       <hr>
+      <!-- Nuevos botones para trabajar con la cola de carnets -->
+      <button onclick="addCardToQueue()">Agregar a Cola</button>
+      <button onclick="printCardQueue()">Imprimir Cola</button>
       <button onclick="printTwoImages()">Imprimir 2 Imágenes</button>
     </div>
   </div>
@@ -948,10 +951,15 @@
     const previewImg1 = document.getElementById('previewImg1');
     const previewImg2 = document.getElementById('previewImg2');
 
+    // Variables para imagen 1
     let rotation1 = 0, scaleX1 = 1, scaleY1 = 1, brightness1 = 1;
+    // Variables para imagen 2
     let rotation2 = 0, scaleX2 = 1, scaleY2 = 1, brightness2 = 1;
     let image1DataUrl = '';
     let image2DataUrl = '';
+
+    // Declaramos la cola de carnets
+    let cardQueue = [];
 
     function openTwoImagesModal() {
       twoImagesOverlay.style.display = 'flex';
@@ -1087,24 +1095,109 @@
       }
     }
 
+    // Función para agregar el "carnet" (la configuración de las 2 imágenes) a la cola
+    function addCardToQueue() {
+      if (!image1DataUrl && !image2DataUrl) {
+        alert("Por favor, carga al menos una imagen.");
+        return;
+      }
+      const card = {
+        image1DataUrl,
+        rotation1,
+        scaleX1,
+        scaleY1,
+        brightness1,
+        image2DataUrl,
+        rotation2,
+        scaleX2,
+        scaleY2,
+        brightness2
+      };
+      cardQueue.push(card);
+      alert("Carnet agregado a la cola. Total en cola: " + cardQueue.length);
+    }
+
+    // Función para imprimir todos los carnets en cola (cada uno en una página)
+    function printCardQueue() {
+      if (cardQueue.length === 0) {
+        alert("La cola está vacía.");
+        return;
+      }
+      const pageWidth = 816;  
+      const pageHeight = 1056; 
+
+      let printWindow = window.open('', '_blank');
+      let html = `
+        <html>
+          <head>
+            <title>Imprimir Carnets en Cola</title>
+            <style>
+              @page { size: letter; margin: 0; }
+              body { margin: 0; padding: 0; }
+              .print-container {
+                width: ${pageWidth}px;
+                height: ${pageHeight}px;
+                margin: 0 auto;
+                position: relative;
+                page-break-after: always;
+              }
+              .top-row {
+                display: flex;
+                flex-direction: row;
+                margin-top: 20px;
+                justify-content: center;
+                gap: 20px;
+              }
+              .img-box {
+                width: 322px;
+                height: 208px;
+                border: 1px solid #ccc;
+                overflow: hidden;
+                position: relative;
+              }
+              .img-box img {
+                width: 100%;
+                height: 100%;
+                transform-origin: center center;
+              }
+            </style>
+          </head>
+          <body>
+      `;
+      cardQueue.forEach(card => {
+        let transform1 = `rotate(${card.rotation1}deg) scale(${(card.rotation1 === 90 || card.rotation1 === 270 ? (208/322 * card.scaleX1) : card.scaleX1)}, ${(card.rotation1 === 90 || card.rotation1 === 270 ? (322/208 * card.scaleY1) : card.scaleY1)})`;
+        let filter1 = `brightness(${card.brightness1})`;
+        let transform2 = `rotate(${card.rotation2}deg) scale(${(card.rotation2 === 90 || card.rotation2 === 270 ? (208/322 * card.scaleX2) : card.scaleX2)}, ${(card.rotation2 === 90 || card.rotation2 === 270 ? (322/208 * card.scaleY2) : card.scaleY2)})`;
+        let filter2 = `brightness(${card.brightness2})`;
+        html += `
+          <div class="print-container">
+            <div class="top-row">
+              <div class="img-box">
+                ${card.image1DataUrl ? `<img src="${card.image1DataUrl}" style="transform: ${transform1}; filter: ${filter1};" />` : ''}
+              </div>
+              <div class="img-box">
+                ${card.image2DataUrl ? `<img src="${card.image2DataUrl}" style="transform: ${transform2}; filter: ${filter2};" />` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      html += `</body></html>`;
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
     function printTwoImages() {
       if (!image1DataUrl && !image2DataUrl) return;
 
       const pageWidth = 816;  
       const pageHeight = 1056; 
 
-      const transform1 = `rotate(${rotation1}deg) scale(${
-        rotation1 === 90 || rotation1 === 270 ? (208/322 * scaleX1) : scaleX1
-      }, ${
-        rotation1 === 90 || rotation1 === 270 ? (322/208 * scaleY1) : scaleY1
-      })`;
+      const transform1 = `rotate(${rotation1}deg) scale(${rotation1 === 90 || rotation1 === 270 ? (208/322 * scaleX1) : scaleX1}, ${rotation1 === 90 || rotation1 === 270 ? (322/208 * scaleY1) : scaleY1})`;
       const filter1 = `brightness(${brightness1})`;
 
-      const transform2 = `rotate(${rotation2}deg) scale(${
-        rotation2 === 90 || rotation2 === 270 ? (208/322 * scaleX2) : scaleX2
-      }, ${
-        rotation2 === 90 || rotation2 === 270 ? (322/208 * scaleY2) : scaleY2
-      })`;
+      const transform2 = `rotate(${rotation2}deg) scale(${rotation2 === 90 || rotation2 === 270 ? (208/322 * scaleX2) : scaleX2}, ${rotation2 === 90 || rotation2 === 270 ? (322/208 * scaleY2) : scaleY2})`;
       const filter2 = `brightness(${brightness2})`;
 
       const w = window.open('', '_blank');
@@ -1188,24 +1281,17 @@
     function openCropModal(imgNumber) {
       currentCropImgNumber = imgNumber;
 
-      // Obtenemos la imagen y su transform actual
       let theImg = (imgNumber === 1) ? previewImg1 : previewImg2;
-      if (!theImg.src) return; // si no hay imagen, no abrir
+      if (!theImg.src) return;
 
-      // Clonamos el estilo transform para "ver" la imagen tal cual
-      // pero en este ejemplo, no aplicamos la rotación/flips en el crop
-      // (Podrías hacerlo si extraes la rotación y la aplicas con canvas,
-      //  pero es más complejo. Aquí mostramos la imagen "tal cual" base64)
       cropImage.src = theImg.src;
 
-      // Reset del cropBox
       cropBoxX = 50;
       cropBoxY = 50;
       cropBoxW = 300;
       cropBoxH = 200;
       updateCropBox();
 
-      // Mostramos modal
       cropOverlay.style.display = 'flex';
     }
 
@@ -1214,7 +1300,6 @@
       cropImage.src = '';
     }
 
-    // Actualiza la posición/tamaño del .crop-box en pantalla
     function updateCropBox() {
       cropBox.style.left = cropBoxX + 'px';
       cropBox.style.top = cropBoxY + 'px';
@@ -1222,9 +1307,7 @@
       cropBox.style.height = cropBoxH + 'px';
     }
 
-    // MouseDown en el cropBox (para arrastrar)
     cropBox.addEventListener('mousedown', (e) => {
-      // Si se hizo clic en un handle, no arrastramos la caja entera
       if (e.target.classList.contains('crop-handle')) return;
 
       isDraggingCropBox = true;
@@ -1234,7 +1317,6 @@
       e.preventDefault();
     });
 
-    // MouseDown en uno de los handles
     const handles = cropBox.querySelectorAll('.crop-handle');
     handles.forEach(handle => {
       handle.addEventListener('mousedown', (e) => {
@@ -1247,15 +1329,12 @@
       });
     });
 
-    // MouseMove global
     document.addEventListener('mousemove', (e) => {
       if (isDraggingCropBox) {
         cropBoxX = e.clientX - cropStartX;
         cropBoxY = e.clientY - cropStartY;
-        // Limites básicos
         if (cropBoxX < 0) cropBoxX = 0;
         if (cropBoxY < 0) cropBoxY = 0;
-        // Podrías limitar a ancho/alto del contenedor
         updateCropBox();
       } else if (isResizing) {
         let dx = e.clientX - cropStartX;
@@ -1278,32 +1357,26 @@
           cropBoxW += dx;
           cropBoxH += dy;
         }
-        // No permitir tamaño negativo
         if (cropBoxW < 20) cropBoxW = 20;
         if (cropBoxH < 20) cropBoxH = 20;
-        // Actualizar
         cropStartX = e.clientX;
         cropStartY = e.clientY;
         updateCropBox();
       }
     });
 
-    // MouseUp global
     document.addEventListener('mouseup', (e) => {
       isDraggingCropBox = false;
       isResizing = false;
       currentHandle = null;
     });
 
-    // Confirmar recorte: usamos <canvas> para extraer la parte del cropBox
     function confirmCrop() {
       if (!cropImage.src) return;
 
-      // Tomamos las dimensiones reales de la imagen dentro de cropContainer
       const rectContainer = cropContainer.getBoundingClientRect();
       const rectImage = cropImage.getBoundingClientRect();
 
-      // Calculamos factor de escala
       const realWidth = cropImage.naturalWidth;
       const realHeight = cropImage.naturalHeight;
       const displayedWidth = rectImage.width;
@@ -1312,18 +1385,14 @@
       const scaleX = realWidth / displayedWidth;
       const scaleY = realHeight / displayedHeight;
 
-      // La posición del cropBox relativo a la imagen
-      // (cropBoxX, cropBoxY) está en coords del contenedor
       const cropLeft = cropBoxX - (rectImage.left - rectContainer.left);
       const cropTop = cropBoxY - (rectImage.top - rectContainer.top);
 
-      // Ajustamos por la escala
       const sx = cropLeft * scaleX;
       const sy = cropTop * scaleY;
       const sw = cropBoxW * scaleX;
       const sh = cropBoxH * scaleY;
 
-      // Crear canvas para recortar
       const canvas = document.createElement('canvas');
       canvas.width = sw;
       canvas.height = sh;
@@ -1334,10 +1403,8 @@
         0, 0, sw, sh
       );
 
-      // Data URL recortada
       const croppedDataUrl = canvas.toDataURL('image/png');
 
-      // Asignamos a la imagen original en el modal de 2 imágenes
       if (currentCropImgNumber === 1) {
         image1DataUrl = croppedDataUrl;
         previewImg1.src = croppedDataUrl;
@@ -1349,7 +1416,6 @@
       closeCropModal();
     }
 
-    // Cuando hacemos clic en la imagen (en el modal de 2 imágenes), abrimos crop
     previewImg1.addEventListener('click', () => openCropModal(1));
     previewImg2.addEventListener('click', () => openCropModal(2));
   </script>
