@@ -65,7 +65,8 @@
     }
     select,
     input[type="checkbox"],
-    input[type="number"] {
+    input[type="number"],
+    input[type="text"] {
       padding: 8px;
       border-radius: 4px;
       border: 1px solid #ccc;
@@ -157,7 +158,7 @@
       filter: brightness(1);
     }
     .collage-container {
-      width: 816px;  /* Forzar tamaño carta en px (8.5"x11" aprox a 96dpi) */
+      width: 816px;  /* Forzar tamaño carta en px (8.5"x11") */
       height: 1056px;
       margin: 0 auto;
       position: relative;
@@ -171,7 +172,7 @@
       overflow: hidden;
     }
     .collage-item {
-      overflow: hidden; /* Para evitar scroll si algo se distorsiona */
+      overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -236,7 +237,7 @@
       }
     }
 
-    /* ======= MODAL 2 IMÁGENES (NUEVO) ======= */
+    /* ======= MODAL 2 IMÁGENES ======= */
     .modal-overlay-2 {
       position: fixed;
       top: 0;
@@ -247,7 +248,7 @@
       display: none;
       justify-content: center;
       align-items: center;
-      z-index: 1000; /* un poco más que el anterior */
+      z-index: 1000;
     }
     .modal-2 {
       background-color: #fff;
@@ -275,7 +276,6 @@
       gap: 10px;
       margin-top: 10px;
     }
-    /* Contenedor fijo: 8.5 cm x 5.5 cm => ~322 px x 208 px */
     .image-box {
       width: 322px;
       height: 208px;
@@ -286,8 +286,8 @@
     .image-box img {
       width: 100%;
       height: 100%;
-      transform-origin: center center; /* para rotar desde el centro */
-      cursor: pointer; /* para indicar que se puede hacer clic para recortar */
+      transform-origin: center center;
+      cursor: pointer;
     }
     .remove-img-btn {
       position: absolute;
@@ -306,7 +306,7 @@
       padding: 0;
     }
 
-    /* ======= MODAL DE RECORTE (NUEVO) ======= */
+    /* ======= MODAL DE RECORTE ======= */
     .modal-overlay-crop {
       position: fixed;
       top: 0;
@@ -317,7 +317,7 @@
       display: none;
       justify-content: center;
       align-items: center;
-      z-index: 2000; 
+      z-index: 2000;
     }
     .modal-crop {
       background-color: #fff;
@@ -338,26 +338,23 @@
     .crop-container {
       position: relative;
       width: 100%;
-      height: 600px; /* altura grande para ver la imagen */
+      height: 600px;
       overflow: hidden;
-      background-color: #333; 
+      background-color: #333;
     }
     .crop-container img {
       position: absolute;
       top: 0;
       left: 0;
-      /* Se escala para que quepa en .crop-container */
       max-width: 100%;
       max-height: 100%;
     }
-    /* Rectángulo de recorte */
     .crop-box {
       position: absolute;
       border: 2px dashed #0af;
       box-sizing: border-box;
-      cursor: move; 
+      cursor: move;
     }
-    /* Esquinas (handles) */
     .crop-handle {
       width: 10px;
       height: 10px;
@@ -381,6 +378,51 @@
       bottom: -5px; right: -5px;
       cursor: nwse-resize;
     }
+
+    /* ======= MODAL TICKET ======= */
+    .modal-overlay-ticket {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+    }
+    .modal-ticket {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    .modal-ticket h2 {
+      margin-top: 0;
+    }
+    .modal-ticket .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #999;
+    }
+    .modal-ticket .modal-close:hover {
+      background-color: #777;
+    }
+    .ticket-field {
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+    .ticket-field label {
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
   </style>
 </head>
 
@@ -391,11 +433,14 @@
       <h1>Impresión de Imágenes</h1>
       <input type="file" id="imageUpload" multiple accept="image/*"/>
 
-      <!-- Botón para abrir modal quitar color (original) -->
+      <!-- Botón para abrir modal quitar color -->
       <button onclick="openModal()">Abrir Modal Quitar Color</button>
 
-      <!-- NUEVO Botón para abrir modal de 2 imágenes -->
+      <!-- Botón para abrir modal de 2 imágenes -->
       <button onclick="openTwoImagesModal()">Abrir Modal 2 Imágenes</button>
+
+      <!-- Botón para abrir modal ticket -->
+      <button onclick="openTicketModal()">Abrir Modal Ticket</button>
 
       <!-- Config vista previa -->
       <div class="form-group">
@@ -553,14 +598,14 @@
       </label>
 
       <hr>
-      <!-- Nuevos botones para trabajar con la cola de carnets -->
+      <!-- Botones para la cola -->
       <button onclick="addCardToQueue()">Agregar a Cola</button>
       <button onclick="printCardQueue()">Imprimir Cola</button>
       <button onclick="printTwoImages()">Imprimir 2 Imágenes</button>
     </div>
   </div>
 
-  <!-- ============ MODAL DE RECORTE (NUEVO) ============ -->
+  <!-- ============ MODAL DE RECORTE ============ -->
   <div class="modal-overlay-crop" id="cropOverlay">
     <div class="modal-crop" id="cropModal">
       <button class="modal-close" onclick="closeCropModal()">X</button>
@@ -576,6 +621,38 @@
       </div>
       <br>
       <button onclick="confirmCrop()">Confirmar Recorte</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL TICKET ============ -->
+  <div class="modal-overlay-ticket" id="ticketModalOverlay">
+    <div class="modal-ticket" id="ticketModal">
+      <button class="modal-close" onclick="closeTicketModal()">X</button>
+      <h2>Generar Ticket</h2>
+
+      <!-- Campos originales -->
+      <div class="ticket-field">
+        <label for="ticketName">Nombre completo:</label>
+        <input type="text" id="ticketName" />
+      </div>
+      <div class="ticket-field">
+        <label for="ticketWork">Tipo de trabajo:</label>
+        <input type="text" id="ticketWork" />
+      </div>
+      <div class="ticket-field">
+        <label for="ticketPaid">Pagado:</label>
+        <input type="number" id="ticketPaid" step="0.01" />
+      </div>
+      <div class="ticket-field">
+        <label for="ticketDebt">Debe:</label>
+        <input type="number" id="ticketDebt" step="0.01" />
+      </div>
+      <div class="ticket-field">
+        <label for="ticketTotal">Total:</label>
+        <input type="number" id="ticketTotal" step="0.01" />
+      </div>
+
+      <button onclick="generateTicketPDF()">Generar PDF Ticket</button>
     </div>
   </div>
 
@@ -663,6 +740,14 @@
       }
       ctx.putImageData(imageData, 0, 0);
       convertedImage.src = canvas.toDataURL('image/png');
+    }
+
+    function downloadImage() {
+      if (!convertedImage.src) return;
+      const link = document.createElement('a');
+      link.href = convertedImage.src;
+      link.download = 'imagen_procesada.png';
+      link.click();
     }
 
     /* ==================== LÓGICA PRINCIPAL (PAGINADO) ==================== */
@@ -761,8 +846,8 @@
 
             currentPage = document.createElement('div');
             currentPage.className = 'page';
-            currentPage.style.width = `${pageWidth}px`;
-            currentPage.style.height = `${pageHeight}px`;
+            currentPage.style.width = pageWidth + 'px';
+            currentPage.style.height = pageHeight + 'px';
             currentPage.style.display = 'grid';
 
             if (useCustomSize) {
@@ -832,7 +917,6 @@
             if (images[1]) addCollageSlot(collageDiv, images[1], '1', '2');
             if (images[2]) addCollageSlot(collageDiv, images[2], '2', '1 / span 2');
             break;
-
           case 5:
             if (orientation === 'landscape') {
               collageDiv.style.gridTemplateColumns = '20% 60% 20%';
@@ -852,17 +936,7 @@
               if (images[4]) addCollageSlot(collageDiv, images[4], '2', '4');
             }
             break;
-
           case 7:
-            collageDiv.style.gridTemplateColumns = '33% 34% 33%';
-            collageDiv.style.gridTemplateRows = '33% 33% 34%';
-            images.forEach((img, i) => {
-              const col = (i % 3) + 1;
-              const row = Math.floor(i / 3) + 1;
-              addCollageSlot(collageDiv, img, col, row);
-            });
-            break;
-
           case 9:
             collageDiv.style.gridTemplateColumns = '33% 34% 33%';
             collageDiv.style.gridTemplateRows = '33% 33% 34%';
@@ -872,7 +946,6 @@
               addCollageSlot(collageDiv, img, col, row);
             });
             break;
-
           default:
             collageDiv.style.gridTemplateColumns = '1fr';
             collageDiv.style.gridTemplateRows = `repeat(${images.length}, 1fr)`;
@@ -951,14 +1024,11 @@
     const previewImg1 = document.getElementById('previewImg1');
     const previewImg2 = document.getElementById('previewImg2');
 
-    // Variables para imagen 1
     let rotation1 = 0, scaleX1 = 1, scaleY1 = 1, brightness1 = 1;
-    // Variables para imagen 2
     let rotation2 = 0, scaleX2 = 1, scaleY2 = 1, brightness2 = 1;
     let image1DataUrl = '';
     let image2DataUrl = '';
 
-    // Declaramos la cola de carnets
     let cardQueue = [];
 
     function openTwoImagesModal() {
@@ -982,7 +1052,6 @@
       document.getElementById('brightnessRange2').value = '1';
     }
 
-    // Carga de imagen 1
     image1Input.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -994,19 +1063,17 @@
       reader.readAsDataURL(file);
     });
 
-    // Carga de imagen 2
     image2Input.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(evt) {
         image2DataUrl = evt.target.result;
-        previewImg2.src = image2DataUrl;
+        previewImg2.src = evt.target.result;
       };
       reader.readAsDataURL(file);
     });
 
-    // Rotar/flip
     function rotateImage(imgNumber, angle) {
       if (imgNumber === 1) {
         rotation1 += angle;
@@ -1036,7 +1103,6 @@
         updateImageTransform(2);
       }
     }
-
     function updateBrightnessIndividual(imgNumber) {
       if (imgNumber === 1) {
         brightness1 = document.getElementById('brightnessRange1').value;
@@ -1046,7 +1112,6 @@
         updateImageTransform(2);
       }
     }
-
     function updateImageTransform(imgNumber) {
       let rotation, scaleX, scaleY, brightness;
       let element;
@@ -1067,18 +1132,17 @@
 
       let baseScaleX = 1;
       let baseScaleY = 1;
+      // Ajuste para rotación 90/270
       if (rotation === 90 || rotation === 270) {
         baseScaleX = 208 / 322; 
         baseScaleY = 322 / 208; 
       }
-
       let finalScaleX = baseScaleX * scaleX;
       let finalScaleY = baseScaleY * scaleY;
 
       element.style.transform = `rotate(${rotation}deg) scale(${finalScaleX}, ${finalScaleY})`;
       element.style.filter = `brightness(${brightness})`;
     }
-
     function removeImage(imgNumber) {
       if (imgNumber === 1) {
         image1DataUrl = '';
@@ -1094,8 +1158,6 @@
         document.getElementById('brightnessRange2').value = '1';
       }
     }
-
-    // Función para agregar el "carnet" (la configuración de las 2 imágenes) a la cola
     function addCardToQueue() {
       if (!image1DataUrl && !image2DataUrl) {
         alert("Por favor, carga al menos una imagen.");
@@ -1116,8 +1178,6 @@
       cardQueue.push(card);
       alert("Carnet agregado a la cola. Total en cola: " + cardQueue.length);
     }
-
-    // Función para imprimir todos los carnets en cola (cada uno en una página)
     function printCardQueue() {
       if (cardQueue.length === 0) {
         alert("La cola está vacía.");
@@ -1165,10 +1225,20 @@
           <body>
       `;
       cardQueue.forEach(card => {
-        let transform1 = `rotate(${card.rotation1}deg) scale(${(card.rotation1 === 90 || card.rotation1 === 270 ? (208/322 * card.scaleX1) : card.scaleX1)}, ${(card.rotation1 === 90 || card.rotation1 === 270 ? (322/208 * card.scaleY1) : card.scaleY1)})`;
+        let transform1 = `rotate(${card.rotation1}deg) scale(${
+          (card.rotation1 === 90 || card.rotation1 === 270 ? (208/322 * card.scaleX1) : card.scaleX1)
+        }, ${
+          (card.rotation1 === 90 || card.rotation1 === 270 ? (322/208 * card.scaleY1) : card.scaleY1)
+        })`;
         let filter1 = `brightness(${card.brightness1})`;
-        let transform2 = `rotate(${card.rotation2}deg) scale(${(card.rotation2 === 90 || card.rotation2 === 270 ? (208/322 * card.scaleX2) : card.scaleX2)}, ${(card.rotation2 === 90 || card.rotation2 === 270 ? (322/208 * card.scaleY2) : card.scaleY2)})`;
+
+        let transform2 = `rotate(${card.rotation2}deg) scale(${
+          (card.rotation2 === 90 || card.rotation2 === 270 ? (208/322 * card.scaleX2) : card.scaleX2)
+        }, ${
+          (card.rotation2 === 90 || card.rotation2 === 270 ? (322/208 * card.scaleY2) : card.scaleY2)
+        })`;
         let filter2 = `brightness(${card.brightness2})`;
+
         html += `
           <div class="print-container">
             <div class="top-row">
@@ -1187,17 +1257,24 @@
       printWindow.document.close();
       printWindow.print();
     }
-
     function printTwoImages() {
       if (!image1DataUrl && !image2DataUrl) return;
 
       const pageWidth = 816;  
       const pageHeight = 1056; 
 
-      const transform1 = `rotate(${rotation1}deg) scale(${rotation1 === 90 || rotation1 === 270 ? (208/322 * scaleX1) : scaleX1}, ${rotation1 === 90 || rotation1 === 270 ? (322/208 * scaleY1) : scaleY1})`;
+      const transform1 = `rotate(${rotation1}deg) scale(${
+        rotation1 === 90 || rotation1 === 270 ? (208/322 * scaleX1) : scaleX1
+      }, ${
+        rotation1 === 90 || rotation1 === 270 ? (322/208 * scaleY1) : scaleY1
+      })`;
       const filter1 = `brightness(${brightness1})`;
 
-      const transform2 = `rotate(${rotation2}deg) scale(${rotation2 === 90 || rotation2 === 270 ? (208/322 * scaleX2) : scaleX2}, ${rotation2 === 90 || rotation2 === 270 ? (322/208 * scaleY2) : scaleY2})`;
+      const transform2 = `rotate(${rotation2}deg) scale(${
+        rotation2 === 90 || rotation2 === 270 ? (208/322 * scaleX2) : scaleX2
+      }, ${
+        rotation2 === 90 || rotation2 === 270 ? (322/208 * scaleY2) : scaleY2
+      })`;
       const filter2 = `brightness(${brightness2})`;
 
       const w = window.open('', '_blank');
@@ -1268,16 +1345,14 @@
     const cropImage = document.getElementById('cropImage');
     const cropBox = document.getElementById('cropBox');
 
-    let currentCropImgNumber = 1; // 1 o 2
+    let currentCropImgNumber = 1; 
     let cropStartX = 0, cropStartY = 0; 
     let isDraggingCropBox = false;
     let isResizing = false;
     let currentHandle = null;
 
-    // Posición y tamaño inicial del cropBox
     let cropBoxX = 50, cropBoxY = 50, cropBoxW = 200, cropBoxH = 150;
 
-    // Abrir modal de recorte
     function openCropModal(imgNumber) {
       currentCropImgNumber = imgNumber;
 
@@ -1294,29 +1369,24 @@
 
       cropOverlay.style.display = 'flex';
     }
-
     function closeCropModal() {
       cropOverlay.style.display = 'none';
       cropImage.src = '';
     }
-
     function updateCropBox() {
       cropBox.style.left = cropBoxX + 'px';
       cropBox.style.top = cropBoxY + 'px';
       cropBox.style.width = cropBoxW + 'px';
       cropBox.style.height = cropBoxH + 'px';
     }
-
     cropBox.addEventListener('mousedown', (e) => {
       if (e.target.classList.contains('crop-handle')) return;
-
       isDraggingCropBox = true;
       cropStartX = e.clientX - cropBoxX;
       cropStartY = e.clientY - cropBoxY;
       e.stopPropagation();
       e.preventDefault();
     });
-
     const handles = cropBox.querySelectorAll('.crop-handle');
     handles.forEach(handle => {
       handle.addEventListener('mousedown', (e) => {
@@ -1328,7 +1398,6 @@
         e.preventDefault();
       });
     });
-
     document.addEventListener('mousemove', (e) => {
       if (isDraggingCropBox) {
         cropBoxX = e.clientX - cropStartX;
@@ -1364,13 +1433,11 @@
         updateCropBox();
       }
     });
-
-    document.addEventListener('mouseup', (e) => {
+    document.addEventListener('mouseup', () => {
       isDraggingCropBox = false;
       isResizing = false;
       currentHandle = null;
     });
-
     function confirmCrop() {
       if (!cropImage.src) return;
 
@@ -1397,11 +1464,7 @@
       canvas.width = sw;
       canvas.height = sh;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(
-        cropImage,
-        sx, sy, sw, sh,
-        0, 0, sw, sh
-      );
+      ctx.drawImage(cropImage, sx, sy, sw, sh, 0, 0, sw, sh);
 
       const croppedDataUrl = canvas.toDataURL('image/png');
 
@@ -1412,12 +1475,125 @@
         image2DataUrl = croppedDataUrl;
         previewImg2.src = croppedDataUrl;
       }
-
       closeCropModal();
     }
 
     previewImg1.addEventListener('click', () => openCropModal(1));
     previewImg2.addEventListener('click', () => openCropModal(2));
+
+    /* ==================== MODAL TICKET ==================== */
+    const ticketModalOverlay = document.getElementById('ticketModalOverlay');
+    function openTicketModal() {
+      ticketModalOverlay.style.display = 'flex';
+    }
+    function closeTicketModal() {
+      ticketModalOverlay.style.display = 'none';
+    }
+
+    /**
+     * ==================== generateTicketPDF() ====================
+     * Ajustamos para que el QR quede debajo de los datos.
+     */
+    async function generateTicketPDF() {
+      const name  = document.getElementById('ticketName').value || "";
+      const work  = document.getElementById('ticketWork').value || "";
+      const paid  = document.getElementById('ticketPaid').value || "0";
+      const debt  = document.getElementById('ticketDebt').value || "0";
+      const total = document.getElementById('ticketTotal').value || "0";
+      const now   = new Date().toLocaleString();
+
+      // Texto para el QR (breve para no saturarlo)
+      const qrText = `TICKET\nCliente:${name}\nTotal:${total}\nFecha:${now}`;
+
+      // Creamos contenedor oculto para el QR
+      const qrContainer = document.createElement('div');
+      qrContainer.style.visibility = 'hidden';
+      document.body.appendChild(qrContainer);
+
+      // Generar QR
+      const qrCode = new QRCode(qrContainer, {
+        text: qrText,
+        width: 100,
+        height: 100,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.L
+      });
+
+      setTimeout(() => {
+        const qrImg = qrContainer.querySelector('img');
+        if (!qrImg) {
+          alert("Error generando el QR (texto demasiado largo).");
+          document.body.removeChild(qrContainer);
+          return;
+        }
+
+        // Usamos tamaño carta (letter) y ocupamos toda la hoja
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+          orientation: 'p',
+          unit: 'pt',
+          format: 'letter'
+        });
+
+        doc.setFont("times", "normal");
+        doc.setFontSize(12);
+
+        let y = 60;  
+        const leftMargin = 50;
+
+        // Encabezado
+        doc.setFontSize(16);
+        doc.text("MULTISERVICIO CINTHIA", leftMargin, y); 
+        y += 20;
+        doc.setFontSize(12);
+        doc.text("RUC: 123456789", leftMargin, y); 
+        y += 15;
+        doc.text("TEL: 75656489", leftMargin, y);
+        y += 15;
+        doc.text("Z/ Mercado GUAPURU 1", leftMargin, y);
+        y += 25;
+
+        // Datos del ticket
+        doc.text(`Cliente: ${name}`, leftMargin, y); 
+        y += 15;
+        doc.text(`Tipo de trabajo: ${work}`, leftMargin, y);
+        y += 15;
+        doc.text(`Teléfono: 76392045`, leftMargin, y); // Ajusta si tienes campo de teléfono
+        y += 15;
+        doc.text(`Fecha: ${now}`, leftMargin, y);
+        y += 15;
+        doc.text(`Pagado: ${paid}`, leftMargin, y);
+        y += 15;
+        doc.text(`Debe: ${debt}`, leftMargin, y);
+        y += 15;
+        doc.text(`Total: ${total}`, leftMargin, y);
+        y += 25;
+
+        // ======= Insertamos el QR DEBAJO DE LOS DATOS =======
+        doc.addImage(qrImg.src, 'PNG', leftMargin, y, 100, 100);
+        y += 120; // Bajamos el "cursor" por debajo del QR
+
+        // Mensaje final
+        doc.setFontSize(14);
+        doc.text("Gracias por su preferencia", leftMargin, y);
+        y += 18;
+        doc.text("MULTISERVICIO CINTHIA", leftMargin, y);
+
+        // Quitamos contenedor del QR
+        document.body.removeChild(qrContainer);
+
+        // Cerramos modal
+        closeTicketModal();
+
+        // Descarga/guarda PDF
+        doc.save('ticket.pdf');
+      }, 300);
+    }
   </script>
+
+  <!-- Librerías (jsPDF y qrcodejs) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </body>
 </html>
