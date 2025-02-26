@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Impresión de Imágenes (Forzar Fill, Rotación y Recorte)</title>
+  <title>Ajustes de Impresión</title>
   <style>
     /* ======= ESTILOS GENERALES ======= */
     body {
@@ -419,9 +419,45 @@
       flex-direction: column;
       text-align: left;
     }
-    .ticket-field label {
-      font-weight: bold;
-      margin-bottom: 3px;
+    
+    /* ======= MODAL QUITAR FONDO (NUEVO) ======= */
+    .modal-overlay-remove-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 4000; /* por encima de los demás */
+    }
+    .modal-remove-bg {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      width: 500px;
+      max-width: 90%;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    .modal-remove-bg h2 {
+      margin-top: 0;
+    }
+    .modal-remove-bg .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #999;
+    }
+    .modal-remove-bg .modal-close:hover {
+      background-color: #777;
+    }
+    #removeBgCanvas {
+      border: 1px solid #ccc;
+      cursor: crosshair;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -436,8 +472,11 @@
       <!-- Botón para abrir modal quitar color -->
       <button onclick="openModal()">Abrir Modal Quitar Color</button>
 
+      <!-- Botón para abrir modal quitar fondo (NUEVO) -->
+      <button onclick="openRemoveBgModal()">Abrir Modal Quitar Fondo</button>
+
       <!-- Botón para abrir modal de 2 imágenes -->
-      <button onclick="openTwoImagesModal()">Abrir Modal 2 Imágenes</button>
+      <button onclick="openTwoImagesModal()">Acomodar Automatico el carnet</button>
 
       <!-- Botón para abrir modal ticket -->
       <button onclick="openTicketModal()">Abrir Modal Ticket</button>
@@ -503,6 +542,11 @@
           <input type="number" id="imageHeight" value="5" min="1" disabled />
         </div>
       </div>
+      <!-- Nuevo control de brillo colocado justo debajo de "Usar tamaño personalizado:" -->
+      <div class="form-group">
+        <label for="brightnessRange">Ajustar Brillo:</label>
+        <input type="range" id="brightnessRange" min="0.5" max="2" step="0.1" value="1" oninput="updateBrightness()"/>
+      </div>
 
       <button onclick="generatePreview()">Generar Vista Previa</button>
       <div id="error-message">Por favor, selecciona al menos una imagen</div>
@@ -520,9 +564,6 @@
       </div>
       <button onclick="generateCollage()">Generar Collage</button>
       <button onclick="printCollage()">Imprimir Collage</button>
-
-      <h2>Ajustar Brillo</h2>
-      <input type="range" id="brightnessRange" min="0.5" max="2" step="0.1" value="1" oninput="updateBrightness()"/>
     </div>
 
     <!-- PREVIEW CONTAINER -->
@@ -553,7 +594,7 @@
   <div class="modal-overlay-2" id="twoImagesOverlay">
     <div class="modal-2" id="twoImagesModal">
       <button class="modal-close" onclick="closeTwoImagesModal()">X</button>
-      <h2>Subir 2 Imágenes</h2>
+      <h2>Subir las 2 caras del Carnet</h2>
 
       <div style="margin-bottom: 10px;">
         <label>Imagen 1:</label>
@@ -653,6 +694,29 @@
       </div>
 
       <button onclick="generateTicketPDF()">Generar PDF Ticket</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL QUITAR FONDO (NUEVO) ============ -->
+  <div class="modal-overlay-remove-bg" id="modalOverlayRemoveBg">
+    <div class="modal-remove-bg" id="modalRemoveBg">
+      <button class="modal-close" onclick="closeRemoveBgModal()">X</button>
+      <h2>Quitar Fondo</h2>
+
+      <input type="file" id="removeBgImageUpload" accept="image/*" />
+      <br><br>
+      <button onclick="removeBgAutomatically()">Quitar Fondo Automático</button>
+      <br><br>
+      <label>
+        Tamaño del pincel:
+        <input type="range" id="brushSizeRange" min="5" max="50" value="20" oninput="updateBrushSize()" />
+      </label>
+      <p>Usa clic y arrastra sobre la imagen para borrar manualmente.</p>
+
+      <!-- Canvas para mostrar la imagen y permitir la edición -->
+      <canvas id="removeBgCanvas" width="400" height="300"></canvas>
+      <br>
+      <button onclick="downloadRemovedBgImage()">Descargar PNG sin fondo</button>
     </div>
   </div>
 
@@ -984,14 +1048,15 @@
         return;
       }
       errorMessage.style.display = 'none';
+      const brightnessVal = document.getElementById('brightnessRange').value;
       const w = window.open('', '_blank');
       w.document.write('<html><head><title>Imprimir Imágenes</title>');
-      w.document.write('<style>body{margin:0;} .page{width:100%;height:100%;display:grid;gap:5px;}');
+      w.document.write('<style>body{margin:0; filter: brightness(' + brightnessVal + ');} .page{width:100%;height:100%;display:grid;gap:5px;}');
       w.document.write('.preview-image{border:1px solid #ccc;display:flex;justify-content:center;align-items:center;overflow:hidden;}');
       w.document.write('.preview-image img{width:100%;height:100%;object-fit:fill;}');
       w.document.write('</style></head><body>');
       pages.forEach(p => w.document.write(p.outerHTML));
-      w.document.write(collageContainer.innerHTML);
+      w.document.write('<div style="filter: brightness(' + brightnessVal + ');">' + collageContainer.innerHTML + '</div>');
       w.document.write('</body></html>');
       w.document.close();
       w.print();
@@ -1003,15 +1068,16 @@
         return;
       }
       errorMessage.style.display = 'none';
+      const brightnessVal = document.getElementById('brightnessRange').value;
       const w = window.open('', '_blank');
       w.document.write('<html><head><title>Imprimir Collage</title>');
       w.document.write('<style>');
-      w.document.write('@page{size:letter;margin:0;} body{margin:0;}');
+      w.document.write('@page{size:letter;margin:0;} body{margin:0; filter: brightness(' + brightnessVal + ');}');
       w.document.write('.collage-container{width:816px;height:1056px;display:grid;gap:5px;overflow:hidden;}');
       w.document.write('.collage-item{overflow:hidden;display:flex;justify-content:center;align-items:center;}');
       w.document.write('.collage-item img{width:100%;height:100%;object-fit:fill;}');
       w.document.write('</style></head><body>');
-      w.document.write(collageContainer.innerHTML);
+      w.document.write('<div style="filter: brightness(' + brightnessVal + ');">' + collageContainer.innerHTML + '</div>');
       w.document.write('</body></html>');
       w.document.close();
       w.print();
@@ -1132,7 +1198,7 @@
 
       let baseScaleX = 1;
       let baseScaleY = 1;
-      // Ajuste para rotación 90/270
+      // Ajuste para rotación 90/270 (dimensiones invertidas)
       if (rotation === 90 || rotation === 270) {
         baseScaleX = 208 / 322; 
         baseScaleY = 322 / 208; 
@@ -1559,7 +1625,7 @@
         y += 15;
         doc.text(`Tipo de trabajo: ${work}`, leftMargin, y);
         y += 15;
-        doc.text(`Teléfono: 76392045`, leftMargin, y); // Ajusta si tienes campo de teléfono
+        doc.text(`Teléfono: 76392045`, leftMargin, y); 
         y += 15;
         doc.text(`Fecha: ${now}`, leftMargin, y);
         y += 15;
@@ -1572,7 +1638,7 @@
 
         // ======= Insertamos el QR DEBAJO DE LOS DATOS =======
         doc.addImage(qrImg.src, 'PNG', leftMargin, y, 100, 100);
-        y += 120; // Bajamos el "cursor" por debajo del QR
+        y += 120;
 
         // Mensaje final
         doc.setFontSize(14);
@@ -1589,6 +1655,113 @@
         // Descarga/guarda PDF
         doc.save('ticket.pdf');
       }, 300);
+    }
+
+    /* ==================== MODAL QUITAR FONDO (NUEVO) ==================== */
+    const modalOverlayRemoveBg = document.getElementById('modalOverlayRemoveBg');
+    const removeBgCanvas = document.getElementById('removeBgCanvas');
+    const removeBgCtx = removeBgCanvas.getContext('2d');
+    let removeBgOriginalImage = null;
+    let isErasing = false;
+    let brushSize = 20;
+    let lastX = 0, lastY = 0;
+
+    document.getElementById('removeBgImageUpload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        removeBgOriginalImage = new Image();
+        removeBgOriginalImage.onload = () => {
+          // Ajustar el canvas al tamaño de la imagen (o a un máximo si se desea)
+          removeBgCanvas.width = removeBgOriginalImage.width;
+          removeBgCanvas.height = removeBgOriginalImage.height;
+          removeBgCtx.drawImage(removeBgOriginalImage, 0, 0);
+        };
+        removeBgOriginalImage.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function openRemoveBgModal() {
+      modalOverlayRemoveBg.style.display = 'flex';
+    }
+    function closeRemoveBgModal() {
+      modalOverlayRemoveBg.style.display = 'none';
+      removeBgCtx.clearRect(0, 0, removeBgCanvas.width, removeBgCanvas.height);
+      removeBgOriginalImage = null;
+      document.getElementById('removeBgImageUpload').value = '';
+    }
+
+    // Borrar fondo negro automáticamente (umbral sencillo)
+    function removeBgAutomatically() {
+      if (!removeBgOriginalImage) return;
+      const imageData = removeBgCtx.getImageData(0, 0, removeBgCanvas.width, removeBgCanvas.height);
+      const data = imageData.data;
+      const threshold = 50; // tolerancia para "negro" (0,0,0)
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // Si r,g,b están cerca de negro, lo volvemos transparente
+        if (r < threshold && g < threshold && b < threshold) {
+          data[i + 3] = 0; // alpha = 0
+        }
+      }
+      removeBgCtx.putImageData(imageData, 0, 0);
+    }
+
+    // Ajustar grosor de pincel
+    function updateBrushSize() {
+      brushSize = parseInt(document.getElementById('brushSizeRange').value, 10);
+    }
+
+    // Eventos para el borrador manual
+    removeBgCanvas.addEventListener('mousedown', (e) => {
+      isErasing = true;
+      [lastX, lastY] = getCanvasPos(e, removeBgCanvas);
+    });
+    removeBgCanvas.addEventListener('mousemove', (e) => {
+      if (!isErasing) return;
+      const [x, y] = getCanvasPos(e, removeBgCanvas);
+      eraseLine(lastX, lastY, x, y);
+      [lastX, lastY] = [x, y];
+    });
+    document.addEventListener('mouseup', () => {
+      isErasing = false;
+    });
+
+    function eraseLine(x1, y1, x2, y2) {
+      removeBgCtx.globalCompositeOperation = 'destination-out';
+      removeBgCtx.lineCap = 'round';
+      removeBgCtx.lineJoin = 'round';
+      removeBgCtx.lineWidth = brushSize;
+
+      removeBgCtx.beginPath();
+      removeBgCtx.moveTo(x1, y1);
+      removeBgCtx.lineTo(x2, y2);
+      removeBgCtx.stroke();
+      removeBgCtx.closePath();
+
+      removeBgCtx.globalCompositeOperation = 'source-over';
+    }
+
+    // Obtener coordenadas correctas dentro del canvas
+    function getCanvasPos(e, canvas) {
+      const rect = canvas.getBoundingClientRect();
+      return [
+        e.clientX - rect.left,
+        e.clientY - rect.top
+      ];
+    }
+
+    // Descargar imagen resultante con fondo transparente
+    function downloadRemovedBgImage() {
+      const link = document.createElement('a');
+      link.download = 'sin_fondo.png';
+      link.href = removeBgCanvas.toDataURL('image/png');
+      link.click();
     }
   </script>
 
