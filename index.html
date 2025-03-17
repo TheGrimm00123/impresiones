@@ -128,6 +128,7 @@
       width: 100%;
       height: 100%;
       object-fit: fill; /* Estira en la vista previa */
+      cursor: pointer;
     }
 
     /* ======= PAGINACIÓN ======= */
@@ -511,7 +512,7 @@
       </div>
 
       <div class="form-group">
-        <label for="orientation">Orientación:</label>
+        <label for="orientation">Orientación de la hoja:</label>
         <select id="orientation">
           <option value="portrait">Vertical</option>
           <option value="landscape">Horizontal</option>
@@ -525,6 +526,12 @@
       <div class="form-group">
         <label for="stretchImage">Estirar imagen</label>
         <input type="checkbox" id="stretchImage" checked />
+      </div>
+      
+      <!-- Nuevo control para orientar la imagen (no la hoja) -->
+      <div class="form-group">
+        <label for="rotateImage">Imagen Horizontal</label>
+        <input type="checkbox" id="rotateImage" />
       </div>
 
       <div class="form-group">
@@ -827,6 +834,7 @@
     const preview = document.getElementById('preview');
     const errorMessage = document.getElementById('error-message');
     const customSizeOptions = document.getElementById('customSizeOptions');
+    const rotateImageCheckbox = document.getElementById('rotateImage');
 
     let currentPageIndex = 0;
     let totalPages = 0;
@@ -871,6 +879,34 @@
         img.onerror = () => reject(new Error('Error al cargar imagen'));
         img.src = url;
       });
+    }
+
+    // Función para actualizar la orientación de las imágenes en la vista previa
+    function updatePreviewOrientation() {
+      const previewImages = document.querySelectorAll('.preview-image img');
+      previewImages.forEach(img => {
+         if (rotateImageCheckbox.checked) {
+             img.style.transform = 'rotate(90deg)';
+         } else {
+             img.style.transform = '';
+         }
+      });
+    }
+    rotateImageCheckbox.addEventListener('change', updatePreviewOrientation);
+
+    // Variable global para el recorte en grid
+    let currentCropTarget = null;
+
+    // Función para abrir el modal de recorte para imágenes en la vista previa
+    function openGridCropModal(imgElement) {
+      currentCropTarget = imgElement;
+      cropImage.src = imgElement.src;
+      cropBoxX = 50;
+      cropBoxY = 50;
+      cropBoxW = 300;
+      cropBoxH = 200;
+      updateCropBox();
+      cropOverlay.style.display = 'flex';
     }
 
     function generatePreview() {
@@ -930,6 +966,14 @@
           clonedImg.style.width = '100%';
           clonedImg.style.height = '100%';
           clonedImg.style.objectFit = 'fill';
+          // Aplicar orientación según checkbox
+          if (rotateImageCheckbox.checked) {
+              clonedImg.style.transform = 'rotate(90deg)';
+          }
+          // Añadir evento para abrir modal de recorte en grid
+          clonedImg.addEventListener('click', function() {
+              openGridCropModal(clonedImg);
+          });
           imgContainer.appendChild(clonedImg);
 
           currentPage.appendChild(imgContainer);
@@ -1417,7 +1461,7 @@
     let isResizing = false;
     let currentHandle = null;
 
-    let cropBoxX = 50, cropBoxY = 50, cropBoxW = 200, cropBoxH = 150;
+    let cropBoxX = 50, cropBoxY = 50, cropBoxW = 150, cropBoxH = 200;
 
     function openCropModal(imgNumber) {
       currentCropImgNumber = imgNumber;
@@ -1438,6 +1482,8 @@
     function closeCropModal() {
       cropOverlay.style.display = 'none';
       cropImage.src = '';
+      // Si se abrió desde la vista previa (grid) reseteamos el target
+      currentCropTarget = null;
     }
     function updateCropBox() {
       cropBox.style.left = cropBoxX + 'px';
@@ -1534,12 +1580,19 @@
 
       const croppedDataUrl = canvas.toDataURL('image/png');
 
-      if (currentCropImgNumber === 1) {
-        image1DataUrl = croppedDataUrl;
-        previewImg1.src = croppedDataUrl;
+      if (currentCropTarget) {
+        // Actualiza la imagen en la vista previa (grid)
+        currentCropTarget.src = croppedDataUrl;
+        currentCropTarget = null;
       } else {
-        image2DataUrl = croppedDataUrl;
-        previewImg2.src = croppedDataUrl;
+        // Modo 2 imágenes
+        if (currentCropImgNumber === 1) {
+          image1DataUrl = croppedDataUrl;
+          previewImg1.src = croppedDataUrl;
+        } else {
+          image2DataUrl = croppedDataUrl;
+          previewImg2.src = croppedDataUrl;
+        }
       }
       closeCropModal();
     }
